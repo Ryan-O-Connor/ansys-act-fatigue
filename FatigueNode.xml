@@ -1,0 +1,305 @@
+<extension version="1" name="FatigueNode">
+	<guid shortid="FatigueNode">031C924F-E39A-4984-949A-07180FC3E3A7</guid>
+	<script src="FatigueNode.py" />
+	
+	<interface context="Mechanical">
+		<images>images</images>
+		
+		<toolbar name="Fatigue">
+			<entry name="Stress Life" caption="Stress Life" icon="result">
+				<entry name="Uniaxial Fully-Reversed Stress" caption="Uniaxial Fully-Reversed Stress" icon="result">
+					<callbacks>
+						<onclick>Create_Uniaxial_Stress_Result</onclick>
+					</callbacks>
+				</entry>
+				<entry name="Uniaxial Life" caption="Uniaxial Life" icon="result">
+					<callbacks>
+						<onclick>Create_Uniaxial_Life_Result</onclick>
+					</callbacks>
+				</entry>
+				<entry name="Multiaxial Fully-Reversed Stress" caption="Multiaxial Fully-Reversed Stress" icon="result">
+					<callbacks>
+						<onclick>Create_Multiaxial_Stress_Result</onclick>
+					</callbacks>
+				</entry>
+				<entry name="Multiaxial Life" caption="Multiaxial Life" icon="result">
+					<callbacks>
+						<onclick>Create_Multiaxial_Life_Result</onclick>
+					</callbacks>
+				</entry>
+			</entry>
+		</toolbar>
+	</interface>
+	
+	
+	<simdata context="Mechanical">
+
+		<result name="Uniaxial Stress" version="1" caption="Uniaxial Equivalent Alternating Stress" unit="Stress" 
+				icon="result" location="node" type="scalar" class="UniaxialStressLife" timehistory="False">
+			<callbacks>
+				<evaluate>uniaxial_stress_eval</evaluate>
+				<onadd>establish_stress_properties</onadd>
+			</callbacks>
+			
+			<property name="Geometry" caption="Geometry" control="scoping"></property>
+			
+			<property name="Stress Component" caption="Stress Component" control="select" default="Von-Mises Stress (Signed)">
+				<attributes options="Von-Mises Stress (Signed)"></attributes>
+			</property>
+			
+			<property name="Calculate Time History" caption="Calculate Time History" control="select" default="No">
+				<attributes options="Yes,No"/>
+				<callbacks>
+					<onvalidate>change_time_hist</onvalidate>
+				</callbacks>
+			</property>
+			
+			<property name="Scale Factor" caption="Scale Factor" control="select" default="3 Sigma">
+				<attributes options="1 Sigma,2 Sigma,3 Sigma"/>
+			</property>
+			
+			<propertygroup name="Load History" display="caption">
+				<propertygroup name="Load History" caption="Load History" display="property" control="select" default="Fully-Reversed">
+					<attributes options="Fully-Reversed"/>
+					<propertygroup name="Prestress Select" caption="Prestress" display="property" control="select" default="No">
+						<attributes options="Yes,No"/>
+						<callbacks>
+							<onvalidate>change_load_history</onvalidate>
+						</callbacks>
+						<property name="Prestress Value" caption="Prestress" control="float" unit="stress"/>
+						<property name="Prestress Time" caption="Prestress Time Step" control="integer"/>
+					</propertygroup>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Mean Stress Theory" display="caption">
+				<property name="Mean Stress Theory" caption="Mean Stress Theory" control="select" default="Modified Goodman">
+					<attributes options="Modified Goodman,Modified Goodman (Extrapolated),Gerber,Smith-Watson-Topper" />
+				</property>
+			</propertygroup>
+			
+			<propertygroup name="Material" caption="Material" display="caption">
+				<propertygroup name="Notch" caption="Notch" display="property" default="Unnotched" control="select">
+					<attributes options="Unnotched,Notched"/>
+					<property name="Stress Concentration Factor" caption="Stress Concentration Factor (Kt)" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Notch Sensitivity Correlation" caption="Notch Sensitivity Correlation" visibleon="Notched" control="select" default="Steel (Peterson)">
+						<attributes options="Steel (Peterson),Aluminum (Peterson)"/>
+					</property>
+					<property name="Notch Radius" caption="Notch Radius" visibleon="Notched" unit="length" control="float"/>
+				</propertygroup>
+				<property name="Temperature Factor" caption="Temperature Factor" control="float" default="1.0"/>
+			</propertygroup>
+		</result>
+		
+		
+		<result name="Uniaxial Life" version="1" caption="Uniaxial Life" unit="" 
+				icon="result" location="node" type="scalar" class="UniaxialStressLife" timehistory="False">
+			<callbacks>
+				<evaluate>uniaxial_life_eval</evaluate>
+				<onadd>establish_life_properties</onadd>
+			</callbacks>
+				
+			<property name="Geometry" caption="Geometry" control="scoping"></property>
+			<property name="Stress Component" caption="Stress Component" control="select" default="Von-Mises Stress (Signed)">
+				<attributes options="Von-Mises Stress (Signed)"/>
+			</property>
+			
+			<property name="Calculate Time History" caption="Calculate Time History" control="select" default="No">
+				<attributes options="Yes,No"/>
+				<callbacks>
+					<onvalidate>change_time_hist</onvalidate>
+				</callbacks>
+			</property>
+			
+			<property name="Scale Factor" caption="Scale Factor" control="select" default="3 Sigma">
+				<attributes options="1 Sigma,2 Sigma,3 Sigma"/>
+			</property>
+			
+			<propertygroup name="Life Measure" display="caption">
+				<propertygroup name="Life Measure" caption="Life Measure" display="property" control="select" default="Cycles to Failure">
+					<attributes options="Cycles to Failure,Miner Sum"></attributes>
+					<callbacks>
+						<onvalidate>change_life_properties</onvalidate>
+					</callbacks>
+					<property name="Number of Cycles" caption="Number of Cycles" control="float"/>
+					<propertygroup name="Vibration Test" caption="Vibration Test" display="property" control="select" default="Single-Axis" readonly="True">
+						<property name="Length of Test" caption="Length of Test (hours)" control="float"/>
+						<property name="Expected Frequency" caption="Expected Frequency" control="float" unit="frequency"/>
+					</propertygroup>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Load History" display="caption">
+				<propertygroup name="Load History" caption="Load History" display="property" control="select" default="Fully-Reversed">
+					<attributes options="Fully-Reversed"/>
+					<propertygroup name="Prestress Select" caption="Prestress" display="property" control="select" default="No">
+						<attributes options="Yes,No"/>
+						<callbacks>
+							<onvalidate>change_load_history</onvalidate>
+						</callbacks>
+						<property name="Prestress Value" caption="Prestress" control="float" unit="stress"/>
+						<property name="Prestress Time" caption="Prestress Time Step" control="integer"/>
+					</propertygroup>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Mean Stress Theory" display="caption">
+				<property name="Mean Stress Theory" caption="Mean Stress Theory" control="select" default="Modified Goodman">
+					<attributes options="Modified Goodman,Modified Goodman (Extrapolated),Gerber,Smith-Watson-Topper" />
+				</property>
+			</propertygroup>
+			
+			<propertygroup name="Material" caption="Material" display="caption">
+				<propertygroup name="Notch" caption="Notch" display="property" default="Unnotched" control="select">
+					<attributes options="Unnotched,Notched"/>
+					<property name="Stress Concentration Factor" caption="Stress Concentration Factor (Kt)" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Notch Sensitivity Correlation" caption="Notch Sensitivity Correlation" visibleon="Notched" control="select" default="Steel (Peterson)">
+						<attributes options="Steel (Peterson),Aluminum (Peterson)"/>
+					</property>
+					<property name="Cycle Sensitivity Correlation" caption="Cycle Sensitivity Correlation" visibleon="Notched" control="select" default="None">
+						<attributes options="None,Steel (Juvinall),Aluminum (Juvinall)" />
+					</property>
+					<property name="Notch Radius" caption="Notch Radius" visibleon="Notched" unit="length" control="float"/>
+				</propertygroup>
+				<property name="Scatter Factor Stress" caption="Scatter Factor (Stress)" control="float" default="1.0"/>
+				<property name="Scatter Factor Life" caption="Scatter Factor (Life)" control="float" default="1.0"/>
+				<property name="Temperature Factor" caption="Temperature Factor" control="float" default="1.0"/>
+				<property name="Miscellaneous Factor" caption="Miscellaneous Factor" control="float" default="1.0"/>
+			</propertygroup>
+		</result>
+		
+		
+		<result name="Multiaxial Stress" version="1" caption="Multiaxial Equivalent Alternating Stress" unit="Stress" 
+				icon="result" location="node" type="scalar" class="MultiaxialEquivalentStressLife" timehistory="False">
+			<callbacks>
+				<evaluate>multiaxial_stress_eval</evaluate>
+				<onadd>establish_stress_properties</onadd>
+			</callbacks>
+			
+			<property name="Geometry" caption="Geometry" control="scoping"></property>
+			
+			<property name="Calculate Time History" caption="Calculate Time History" control="select" default="No">
+				<attributes options="Yes,No"/>
+				<callbacks>
+					<onvalidate>change_time_hist</onvalidate>
+				</callbacks>
+			</property>
+			
+			<propertygroup name="Load History" display="caption">
+				<propertygroup name="Load History" caption="Load History" display="property" control="select" default="Fully-Reversed">
+					<attributes options="Fully-Reversed"/>
+					<propertygroup name="Prestress Select" caption="Prestress" display="property" control="select" default="No">
+						<attributes options="Yes,No"/>
+						<callbacks>
+							<onvalidate>change_load_history</onvalidate>
+						</callbacks>
+						<property name="Prestress Value" caption="Prestress" control="float" unit="stress"/>
+						<property name="Prestress Time" caption="Prestress Time Step" control="integer"/>
+					</propertygroup>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Multiaxial Stress Theory" display="caption">
+				<propertygroup name="Multiaxial Stress Theory" caption="Multiaxial Stress Theory" display="property" control="select" default="Equivalent Stress (Sines)">
+					<attributes options="Equivalent Stress (Sines),Equivalent Stress (Hydrostatic Mean),Equivalent Stress (Signed Von-Mises Mean)" />
+					<propertygroup name="Sines Constant" caption="Sines Hydrostatic Stress Sensitivity Factor" display="property" visibleon="Equivalent Stress (Sines)" control="select" default="User Input">
+						<attributes options="User Input,6061-T6 (a=0.29),A286 (a=0.32)" />
+						<property name="Sines Constant" caption="Sines Constant" visibleon="User Input" control="float"/>
+					</propertygroup>
+					<property name="Mean Stress Theory" caption="Mean Stress Theory" visibleon="Equivalent Stress (Hydrostatic Mean)|Equivalent Stress (Signed Von-Mises Mean)" control="select" default="Modified Goodman">
+						<attributes options="Modified Goodman,Modified Goodman (Extrapolated),Gerber,Smith-Watson-Topper" />
+					</property>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Material" caption="Material" display="caption">
+				<propertygroup name="Notch" caption="Notch" display="property" control="select" default="Unnotched">
+					<attributes options="Unnotched,Notched"/>
+					<property name="Kt - Maximum Principal Stress" caption="Principal Stress Concentration Factor - Maximum" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Kt - Middle Principal Stress" caption="Principal Stress Concentration Factor - Middle" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Kt - Minimum Principal Stress" caption="Principal Stress Concentration Factor - Minimum" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Notch Sensitivity Correlation" caption="Notch Sensitivity Correlation" visibleon="Notched" control="select" default="Steel (Peterson)">
+						<attributes options="Steel (Peterson),Aluminum (Peterson)"/>
+					</property>
+					<property name="Notch Radius" caption="Notch Radius" visibleon="Notched" unit="length" control="float"/>
+				</propertygroup>
+				<property name="Temperature Factor" caption="Temperature Factor" control="float" default="1.0"/>
+			</propertygroup>
+		</result>
+		
+		
+		<result name="Multiaxial Life" version="1" caption="Multiaxial Life" unit=""
+				icon="result" location="node" type="scalar" class="MultiaxialEquivalentStressLife" timehistory="False">
+			<callbacks>
+				<evaluate>multiaxial_life_eval</evaluate>
+				<onadd>establish_life_properties</onadd>
+			</callbacks>
+			
+			<property name="Geometry" caption="Geometry" control="scoping"></property>
+			
+			<property name="Calculate Time History" caption="Calculate Time History" control="select" default="No">
+				<attributes options="Yes,No"/>
+				<callbacks>
+					<onvalidate>change_time_hist</onvalidate>
+				</callbacks>
+			</property>
+			
+			<propertygroup name="Life Measure" display="caption">
+				<propertygroup name="Life Measure" caption="Life Measure" display="property" control="select" default="Cycles to Failure">
+					<attributes options="Cycles to Failure,Miner Sum"></attributes>
+					<property name="Number of Cycles" caption="Number of Cycles" visibleon="Miner Sum" control="float"/>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Load History" display="caption">
+				<propertygroup name="Load History" caption="Load History" display="property" control="select" default="Fully-Reversed">
+					<attributes options="Fully-Reversed"/>
+					<propertygroup name="Prestress Select" caption="Prestress" display="property" control="select" default="No">
+						<attributes options="Yes,No"/>
+						<callbacks>
+							<onvalidate>change_load_history</onvalidate>
+						</callbacks>
+						<property name="Prestress Value" caption="Prestress" control="float" unit="stress"/>
+						<property name="Prestress Time" caption="Prestress Time Step" control="integer"/>
+					</propertygroup>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Multiaxial Stress Theory" display="caption">
+				<propertygroup name="Multiaxial Stress Theory" caption="Multiaxial Stress Theory" display="property" control="select" default="Equivalent Stress (Sines)">
+					<attributes options="Equivalent Stress (Sines),Equivalent Stress (Hydrostatic Mean),Equivalent Stress (Signed Von-Mises Mean)" />
+					<propertygroup name="Sines Constant" caption="Sines Hydrostatic Stress Sensitivity Factor" display="property" visibleon="Equivalent Stress (Sines)" control="select" default="User Input">
+						<attributes options="User Input,6061-T6 (a=0.29),A286 (a=0.32)" />
+						<property name="Sines Constant" caption="Sines Constant" visibleon="User Input" control="float"/>
+					</propertygroup>
+					<property name="Mean Stress Theory" caption="Mean Stress Theory" visibleon="Equivalent Stress (Hydrostatic Mean)|Equivalent Stress (Signed Von-Mises Mean)" control="select" default="Modified Goodman">
+						<attributes options="Modified Goodman,Modified Goodman (Extrapolated),Gerber,Smith-Watson-Topper" />
+					</property>
+				</propertygroup>
+			</propertygroup>
+			
+			<propertygroup name="Material" caption="Material" display="caption">
+				<propertygroup name="Notch" caption="Notch" display="property" control="select" default="Unnotched">
+					<attributes options="Unnotched,Notched"/>
+					<property name="Kt - Maximum Principal Stress" caption="Principal Stress Concentration Factor - Maximum" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Kt - Middle Principal Stress" caption="Principal Stress Concentration Factor - Middle" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Kt - Minimum Principal Stress" caption="Principal Stress Concentration Factor - Minimum" visibleon="Notched" control="float" default="1.0"/>
+					<property name="Notch Sensitivity Correlation" caption="Notch Sensitivity Correlation" visibleon="Notched" control="select" default="Steel (Peterson)">
+						<attributes options="Steel (Peterson),Aluminum (Peterson)"/>
+					</property>
+					<property name="Cycle Sensitivity Correlation" caption="Cycle Sensitivity Correlation" visibleon="Notched" control="select" default="None">
+						<attributes options="None,Steel (Juvinall),Aluminum (Juvinall)" />
+					</property>
+					<property name="Notch Radius" caption="Notch Radius" visibleon="Notched" unit="length" control="float"/>
+				</propertygroup>
+				<property name="Scatter Factor Stress" caption="Scatter Factor (Stress)" control="float" default="1.0"/>
+				<property name="Scatter Factor Life" caption="Scatter Factor (Life)" control="float" default="1.0"/>
+				<property name="Temperature Factor" caption="Temperature Factor" control="float" default="1.0"/>
+				<property name="Miscellaneous Factor" caption="Miscellaneous Factor" control="float" default="1.0"/>
+			</propertygroup>
+		</result>
+		
+		
+	</simdata>
+	
+</extension>
